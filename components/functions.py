@@ -1,5 +1,6 @@
 import dash_cytoscape as cyto
 import pandas as pd
+import re
 
 # Function to convert data within column to string, this is required for dash_table function
 def ensure_string_columns(df):
@@ -13,6 +14,7 @@ def ensure_string_columns(df):
 
 
 def create_graph(elements):
+    print('inside create graph')
     children = [
         cyto.Cytoscape(
             id='cytoscape',
@@ -81,4 +83,50 @@ def create_graph(elements):
         ),
 
     ]
+    print('before create graph return')
+    print(children)
     return children
+
+
+## Layer 3 Graph Functions
+def getnodes(batfish_df):
+    print('inside get nodes')
+    node_x = [re.sub('\[.*', '', str(x)) for x in batfish_df['Interface']]
+    nodes = [{'data': {'id': device, 'label': device}} for device in
+             set(node_x)]
+    return nodes
+
+def getedges(batfish_df):
+    print('inside get edges')
+    test_edges = set(
+        tuple(zip(batfish_df['Interface'], batfish_df['Remote_Interface'])))
+    new_edges = []
+    new_new_edges = []
+    for edge in test_edges:
+        if edge not in new_edges:
+            if edge[::-1] not in new_edges:
+                new_edges.append(edge)
+                test = []
+                for x in edge:
+                    x = re.sub('\]', '', str(x))
+                    x_test = x.split('[')
+                    x_test[1] = re.sub("\..*", ".subints", x_test[1])
+                    x_test[1] = re.sub("^Ethernet", "eth", x_test[1])
+                    x_test[1] = re.sub("^TenGigabitEthernet", "Ten", x_test[1])
+                    x_test[1] = re.sub("^GigabitEthernet", "Ge", x_test[1])
+                    x_test[1] = re.sub("^port-channel", "po", x_test[1])
+                    x_test[1] = re.sub("^Port-Channel", "po", x_test[1])
+                    x_test[1] = re.sub(r"([^-]+-\S{4})(.*)",r"\1", x_test[1])  #shorten the AWS interface names
+                    test += x_test
+                new_new_edges.append(test)
+    new_new_edges = list(set(tuple(sub) for sub in new_new_edges))
+    edges = [
+        {'data': {'source': source, 'target': target,
+                  'source_label': source_int, 'target_label': target_int}}
+        for source, source_int, target, target_int in new_new_edges]
+    return edges
+
+# Create Graphs
+def get_layer3_graph(batfish_df):
+    print('get layer 3 graph inside')
+    return create_graph(getnodes(batfish_df) + getedges(batfish_df))

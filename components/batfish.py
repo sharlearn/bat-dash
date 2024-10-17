@@ -31,18 +31,25 @@ class Batfish():
 
   # Get Node Properties
   def node_properties(self, nodes_requested):
-    print(f'nodes requests {nodes_requested}')
-    print(f'type of node requested: {type(nodes_requested)}')
     ##Fetches node properties for the requested nodes.
     try:
-        result = self.bf.q.nodeProperties(nodes=nodes_requested).answer().frame()
-        print("Node properties retrieved successfully.")
-        return result
+        if nodes_requested:
+          result = self.bf.q.nodeProperties(nodes=nodes_requested).answer().frame()
+          print("Node properties retrieved successfully.")
+          return result
+        else:
+           return self.bg.q.nodeProperties().answer().frame()
     except Exception as e:
         print(f"Error retrieving node properties: {e}")
         return None
     
   # Get Layer 3 Edges
+  def layer3_edges(self):
+    try:
+       return self.bf.q.layer3Edges().answer().frame()
+    except Exception as e:
+       print(f"Error retrieving layer 3 edges: {e}")
+       return None
 
   # Get interface properties
   def interface_properties(self, interfaces=None):
