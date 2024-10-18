@@ -4,7 +4,7 @@ from dash import html, dash_table, callback, Input, Output, State, dcc
 from components.batfish import Batfish
 import dash_cytoscape as cyto
 import pandas as pd
-from components.functions import ensure_string_columns, get_layer3_graph
+from components.functions import ensure_string_columns, get_layer3_graph, get_bgp_graph
 
 external_stylesheets=['./Assets/bWLwgP.css']
 
@@ -34,29 +34,16 @@ def render_content(tab):
             html.Button('Submit', id='submit-network', n_clicks=0)])
     elif tab == 'tab-2':
         return html.Div([
-            # Input and button for Node Properties
-            html.Div([
-                html.Label("Node Properties:"),
-                dcc.Input(id='node-name', type='text', placeholder="Enter node name"),
-                html.Button('Get Node Properties', id='submit-node', n_clicks=0),
-                html.Div(id='node-output')
+            dcc.Tabs(id='batfish-tabs', value='node-props', children=[
+                dcc.Tab(label='Node Props', value='node-props'),
+                dcc.Tab(label='Layer 3 Edges', value='layer3-edges'),
+                dcc.Tab(label='BGP Edges', value='bgp-edges'),
+                dcc.Tab(label='Trace Route', value='trace-route')
             ]),
-            html.Br(),
-            
-            # Button for Layer 3 Edges
-            html.Div([
-                html.Button('Get Layer 3 Edges', id='submit-layer3', n_clicks=0),
-                html.Div(id='layer3-output')  # Placeholder for layer 3 edges output
-            ]),
-            html.Br(),
-            
-            # Button for BGP Edges
-            html.Div([
-                html.Button('Get BGP Edges', id='submit-bgp', n_clicks=0),
-                html.Div(id='bgp-output')  # Placeholder for BGP edges output
+            html.Div(id='batfish-tabs-content')
             ])
-        ])
 
+# Getting batfish initialize data from tab 1
 @callback(
     Output('batfish-network-info', 'data'),
     Input('submit-network', 'n_clicks'),
@@ -74,6 +61,30 @@ def initialize_batfish_instance(n_clicks, batfish_host, network_name, snapshot_n
         }
     return dash.no_update
 
+# Rendering items in tab 2
+@app.callback(
+    Output('batfish-tabs-content', 'children'),
+    Input('batfish-tabs', 'value')
+)
+def render_batfish_tab_content(tab):
+    if tab == 'node-props':
+        return html.Div([
+            html.Label("Node Properties:"),
+            dcc.Input(id='node-name', type='text', placeholder="Enter node name"),
+            html.Button('Get Node Properties', id='submit-node', n_clicks=0),
+            html.Div(id='node-output', style={'marginTop': '10px'})
+        ])
+    elif tab == 'layer3-edges':
+        return html.Div([
+            html.Button('Get Layer 3 Edges', id='submit-layer3', n_clicks=0),
+            html.Div(id='layer3-output', style={'marginTop': '10px'})
+        ])
+    elif tab == 'bgp-edges':
+        return html.Div([
+            html.Button('Get BGP Edges', id='submit-bgp', n_clicks=0),
+            html.Div(id='bgp-output', style={'marginTop': '10px'})
+        ])
+
 @callback(
     Output('node-output', 'children'),
     Input('submit-node', 'n_clicks'),
@@ -82,18 +93,13 @@ def initialize_batfish_instance(n_clicks, batfish_host, network_name, snapshot_n
 )
 def get_node_properties(n_clicks, batfish_data, node_name):
     if n_clicks > 0 and batfish_data:
-        bf = Batfish(
-            batfish_data['host'],
+        node_properties = Batfish(batfish_data['host'],
             batfish_data['network'],
-            batfish_data['snapshot']
-        )
-        node_properties = bf.node_properties(node_name)
+            batfish_data['snapshot']).node_properties(node_name)
 
         if node_properties is not None and not node_properties.empty:
-            print('node props not empty')
-            print(node_properties)
             selected_columns = ['Node', 'Configuration_Format', 'Interfaces', 'Routing_Policies']
-            node_properties_selected = node_properties[selected_columns]
+            node_properties_selected = node_properties[selected_columns].copy()
             #Ensure all columns are string-compatible
             node_properties_selected = ensure_string_columns(node_properties_selected)
 
@@ -113,6 +119,7 @@ def get_node_properties(n_clicks, batfish_data, node_name):
             return "No data found for the provided node."
     return ""
 
+# Getting data and creating layer 3 graph
 @callback(
     Output('layer3-output', 'children'),
     Input('submit-layer3', 'n_clicks'),
@@ -125,6 +132,20 @@ def get_layer3(n_clicks, batfish_data):
             batfish_data['snapshot']).layer3_edges()
         if layer3 is not None:
             return get_layer3_graph(layer3)
+
+# Getting data and creating bgp graph        
+@callback(
+    Output('bgp-output', 'children'),
+    Input('submit-bgp', 'n_clicks'),
+    State('batfish-network-info', 'data'),  # Stored Batfish data
+)
+def get_bgp(n_clicks, batfish_data):
+    if n_clicks > 0:
+        bgp_info = Batfish(batfish_data['host'],
+            batfish_data['network'],
+            batfish_data['snapshot']).bgp_edges()
+        if bgp_info is not None:
+            return get_bgp_graph(bgp_info)
 
 # Run the app
 if __name__ == '__main__':

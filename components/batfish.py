@@ -38,7 +38,7 @@ class Batfish():
           print("Node properties retrieved successfully.")
           return result
         else:
-           return self.bg.q.nodeProperties().answer().frame()
+           return self.bf.q.nodeProperties().answer().frame()
     except Exception as e:
         print(f"Error retrieving node properties: {e}")
         return None
@@ -65,3 +65,9 @@ class Batfish():
 
 
   # Get BGP Edges
+  def bgp_edges(self):
+    try:
+        return self.bf.q.bgpEdges().answer().frame()
+    except Exception as e:
+        print(f"Error retrieving bgp edges: {e}")
+        return None
