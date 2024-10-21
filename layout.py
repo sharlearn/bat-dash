@@ -18,12 +18,12 @@ tab_selected_style = {
 }
 
 page_layout = html.Div([
-    html.H1("Batfish Dashboard"),
+    html.H1("Batfish Dashboard", style={'textAlign': 'center'}),
     
     ## Tabs to organize elements
     dcc.Tabs(id="tabs", value='tab-1', children=[
-        dcc.Tab(label='Set Network', value='tab-1', style=tab_style, selected_style=tab_selected_style),
-        dcc.Tab(label='Batfish Queries', value='tab-2', style=tab_style, selected_style=tab_selected_style),
+        dcc.Tab(label='Set Network', value='tab-1'),
+        dcc.Tab(label='Batfish Queries', value='tab-2'),
     ], style=tabs_style),
     dcc.Store(id='batfish-network-info'),
     html.Div(id='tabs-content-inline')

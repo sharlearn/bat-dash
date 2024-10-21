@@ -22,7 +22,7 @@ def create_graph(elements):
             responsive=True,
 
             style={
-                'width': '90%',
+                'width': '100%',
                 'height': '700px',
             },
             elements=elements,
